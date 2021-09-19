@@ -2,13 +2,15 @@
 // This file runs the main shell, which
 // gets a command and executes it.
 
-#include  <stdio.h>
+#include <stdio.h>
 #include <stdlib.h>
-#include "shell_consts.h"
+
 #include "bool.h"
+#include "cmd.h"
 #include "exec_cmd.h"
+#include "shell_consts.h"
 #include "str_utils.h"
-#include "tokenizer.h"
+#include "cmd_parser.h"
 
 // Used to clear last input buffer character.
 #define DUMMY_CHAR 'a';
@@ -28,17 +30,12 @@ static void run();
  *         or FALSE otherwise.
  */
 static bool parse_and_exec(char *cmd_str) {
-    char **tokens = tokenize(cmd_str);
-    if (tokens == NULL) {
+    Cmd *cmd = get_cmd(cmd_str);
+    if (cmd == NULL) {
         return FALSE;
     }
-    if (*tokens == NULL) {
-        free(tokens);
-        return FALSE;
-    }
-    
-    bool end_shell = execute(tokens);
-    dealloc_str_arr(&tokens);
+    bool end_shell = execute(cmd);
+    dealloc_cmd_specific(cmd);
     return end_shell;
 }
 

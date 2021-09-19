@@ -6,9 +6,10 @@
 #define EXEC_CMD_H
 
 #include "bool.h"
+#include "cmd.h"
 
 // Forks() a child to execute the command
 // with its args.
-bool execute(char **args);
+bool execute(Cmd *cmd);
 
 #endif
