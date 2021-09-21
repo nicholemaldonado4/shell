@@ -71,7 +71,7 @@ void print_ll(LList *list, void (*print_func)(void *)) {
  * Deallocates the linked list.
  * Input: The linked list and deallocator function
  *        for the node's value.
- * Output: False.
+ * Output: None.
  */
 void dealloc_ll(LList **list, void (*dealloc_func)(void **)) {
     if (list == NULL || *list == NULL) {
@@ -86,4 +86,13 @@ void dealloc_ll(LList **list, void (*dealloc_func)(void **)) {
     }
     free(*list);
     *list = NULL;
+}
+
+/*
+ * Checks if the linked list is empty.
+ * Input: The linked list.
+ * Output: True if the list is empty, false otherwise.
+ */
+bool is_empty_ll(LList *list) {
+    return list == NULL || list->head == NULL;
 }

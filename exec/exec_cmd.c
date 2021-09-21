@@ -38,39 +38,6 @@ static void execute_cmd(Cmd *cmd);
  *        "cd" command.
  * Output: None.
  */
-//static bool get_last_out(LList *redirs) {
-//    Node *redir_node = redirs->head;
-//    while (redir_node != NULL) {
-//        Redirection *redir = redir_node->val;
-//        if (redir->type == INPUT) {
-//            int fd = open(redir->name, O_RDONLY);
-//            if (fd < 0) {
-//                print_err();
-//                return FALSE;
-//            }
-//            close(fd);
-//        } else {
-//            int fd = open(redir->name, O_CREAT | O_TRUNC | O_WRONLY,  S_IRUSR | S_IWUSR);
-//            if (fd < 0) {
-//                print_err();
-//                return FALSE;
-//            }
-//            dup2(fd, STDERR_FILENO);
-//            close(fd);
-//        }
-//        redir_node = redir_node->next;
-//    }
-//    return TRUE;
-//}
-
-/*
- * Changes the directory to the dir provided in args.
- * Input: args whose first char * is "cd". The second
- *        char * should be the directory. If more args
- *        are provided, they are ignored like the unix
- *        "cd" command.
- * Output: None.
- */
 static void change_directory(Cmd *cmd) {
     int old_err_fd = dup(STDERR_FILENO);
     if (!setup_redirs(cmd->redirections, TRUE)) {
@@ -186,9 +153,17 @@ static void execute_cmd(Cmd *cmd) {
  * Output: Null.
  */
 bool execute(Cmd *cmd) {
-    if (strcmp(cmd->args[0], CD_CMD) == 0) {
+
+    // If we only have redirection, then basically open/close 
+    // the input/output files.
+    if (cmd->args[0] == NULL) {
+        int old_err_fd = dup(STDERR_FILENO);
+        setup_redirs(cmd->redirections, TRUE);
+        dup2(old_err_fd, STDERR_FILENO);
+    } else if (strcmp(cmd->args[0], CD_CMD) == 0) {
         change_directory(cmd);
     } else if (strcmp(cmd->args[0], EXIT_CMD) == 0) {
+
         // If the first arg is exit, we ignore everything
         // else and exit, just like the UNIX exit.
         return TRUE;

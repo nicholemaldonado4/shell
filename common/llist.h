@@ -29,4 +29,7 @@ void print_ll(LList *list, void (*print_func)(void *));
 // Deallocates the linked list.
 void dealloc_ll(LList **list, void (*dealloc_func)(void **));
 
+// Checks if list is empty.
+bool is_empty_ll(LList *list);
+
 #endif

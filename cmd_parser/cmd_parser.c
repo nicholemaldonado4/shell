@@ -131,7 +131,6 @@ static int get_end_of_token(char *str, int token_start) {
     return token_start;
 }
 
-
 /*
  * Checks if the curr_char is a redirection.
  * Input: the current char.
@@ -254,19 +253,6 @@ static Cmd *tokenize(char *line) {
     while (line[i] != '\0') {
         char curr_char = line[i];
         if (is_space(curr_char)) {
-//            token[token_index] = '\0';
-            
-            // If we currently have tokens to store, store
-            // them.
-//            if (token_index != 0) {
-//                if (!add_token(token_num, total_token, token, cmd->args)) {
-//                    dealloc_cmd_tok(&cmd, &token);
-//                    return NULL;
-//                }
-//                token_num++;
-//                total_token++;
-//                token_index = 0; 
-//            }
             if (!add_token_if_exists(&token_num, &total_token, &token_index, token, cmd->args)) {
                 dealloc_cmd_tok(&cmd, &token);
                 return NULL;
@@ -308,7 +294,7 @@ Cmd *get_cmd(char *line) {
     if (cmd == NULL) {
         return NULL;
     }
-    if (cmd->args[0] == NULL) {
+    if (cmd->args[0] == NULL && is_empty_ll(cmd->redirections)) {
         dealloc_cmd_specific(cmd);
         return NULL;
     }
