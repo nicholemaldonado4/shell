@@ -39,6 +39,8 @@ static void execute_cmd(Cmd *cmd);
  * Output: None.
  */
 static void change_directory(Cmd *cmd) {
+    
+    // Assumes STDERR_FILENO exists when we first run the program.
     int old_err_fd = dup(STDERR_FILENO);
     if (!setup_redirs(cmd->redirections, TRUE)) {
         dup2(old_err_fd, STDERR_FILENO);
@@ -46,9 +48,7 @@ static void change_directory(Cmd *cmd) {
         return;
     }
     
-    
     if (cmd->args[1] == NULL) {
-//        printf("Shell: Incorrect command to display and prompting for the next command.\n");
         print_err();
         dup2(old_err_fd, STDERR_FILENO);
         close(old_err_fd);
@@ -56,12 +56,13 @@ static void change_directory(Cmd *cmd) {
     }
     
     if (chdir(cmd->args[1]) < 0) {
-//        printf("Shell: cd: %s: No such file or directory\n", args[1]);
         print_err();
         dup2(old_err_fd, STDERR_FILENO);
         close(old_err_fd);
         return;
     }
+    
+    // Restore original standard error.
     dup2(old_err_fd, STDERR_FILENO);
     close(old_err_fd);
     return;
@@ -74,7 +75,6 @@ static void change_directory(Cmd *cmd) {
  */
 static void run_executable(char **args) {
     execvp(args[0], args);
-//    printf("Shell: %s: command not found\n", args[0]);
     print_err();
     exit(1);
 }
@@ -129,7 +129,6 @@ static bool setup_redirs(LList *redirs, bool set_err_only) {
 static void execute_cmd(Cmd *cmd) {
     int rc = fork();
     if (rc < 0) {
-//        printf("Shell: Unable to fork.\n");
         print_err();
         return;
     } else if (rc == 0) {

@@ -26,16 +26,6 @@ Redirection *create_redirection(char *name, RedirType redir_type) {
     return redir;
 }
 
-void print_redir(void *redir) {
-    Redirection *curr = (Redirection *)redir;
-    if (curr != NULL) {
-        char *type = (curr->type == INPUT) ? "input" : "output";
-    
-        printf("         Redirection: name: %s, type: %s\n", curr->name, type);
-    }
-    
-}
-
 /*
  * Deallocates the redirection.
  * Input: The redirection to deallocate.
@@ -50,15 +40,6 @@ static void dealloc_redirection_specific(Redirection *redir) {
 }
 
 /*
- * Determines the redirection type.
- * Input: The curr character to determine if input or output.
- * Output: The redirection type.
- */
-RedirType get_redir_type(char curr_char) {
-    return curr_char == '>' ? OUTPUT : INPUT;
-}
-
-/*
  * Deallocates the redirections.
  * Input: a void** which actually refers to a redirection.
  * Output: None.
@@ -66,4 +47,13 @@ RedirType get_redir_type(char curr_char) {
 void dealloc_redirection(void **redir) {
     dealloc_redirection_specific((Redirection *)(*redir));
     *redir = NULL; 
+}
+
+/*
+ * Determines the redirection type.
+ * Input: The curr character to determine if input or output.
+ * Output: The redirection type.
+ */
+RedirType get_redir_type(char curr_char) {
+    return curr_char == '>' ? OUTPUT : INPUT;
 }

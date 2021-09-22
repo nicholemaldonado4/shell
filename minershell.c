@@ -7,10 +7,11 @@
 
 #include "bool.h"
 #include "cmd.h"
+#include "cmd_parser.h"
 #include "exec_cmd.h"
+#include "err_msg.h"
 #include "shell_consts.h"
 #include "str_utils.h"
-#include "cmd_parser.h"
 
 // Used to clear last input buffer character.
 #define DUMMY_CHAR 'a';
@@ -69,7 +70,7 @@ static void run() {
         
         if (user_input[MAX_INPUT_SIZE] == '\0' &&
            user_input[MAX_INPUT_SIZE - 1] != '\n') {
-            printf("Shell: Input exceeded max limit.\n");
+            print_err();
             scanf("%*[^\n]");
             scanf("%*c");
         } else {

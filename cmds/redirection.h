@@ -20,8 +20,6 @@ typedef struct Redirection {
 // Creates a redirection.
 Redirection *create_redirection(char *name, RedirType redir_type);
 
-void print_redir(void *redir);
-
 // Deallocates the redirection.
 void dealloc_redirection(void **redir);
 

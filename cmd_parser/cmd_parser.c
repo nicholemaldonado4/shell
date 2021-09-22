@@ -44,6 +44,9 @@ static char *str_cpy(char *str, int start, int end);
 static bool add_token_if_exists(int *token_num, int *total_token, 
             int *token_index, char *token, char **args);
 
+// Tokenizes line into a Cmd.
+static Cmd *tokenize(char *line);
+
 /*
  * Adds token to tokens at token_num.
  * Input: token which will be added to tokens at token_num.
@@ -52,14 +55,12 @@ static bool add_token_if_exists(int *token_num, int *total_token,
  */
 static bool add_token(int token_num, int total_token, char *token, char **tokens) {
     if (total_token >= MAX_NUM_TOKENS) {
-//        printf("Shell: Token number exceeded max size limit.\n");
         print_err();
         return FALSE;
     }
     tokens[token_num] = strdup(token);
     tokens[token_num + 1] = NULL;
     if (tokens == NULL) {
-//        printf("Shell: Unable to allocate memory.\n");
         print_err();
         return FALSE;
     }
@@ -87,14 +88,12 @@ static void dealloc_cmd_tok(Cmd **cmd, char **token) {
 static bool init_cmd_tok(Cmd **cmd, char **token) {
     *cmd = create_empty_cmd();    
     if (*cmd == NULL) {
-//        printf("Shell: Unable to allocate memory.\n");
         print_err();
         return FALSE;
     }
 
     *token = (char *)malloc((MAX_TOKEN_SIZE + 1) * sizeof(char));
     if (*token == NULL) {
-//        printf("Shell: Unable to allocate memory.\n");
         print_err();
         dealloc_cmd_specific(*cmd);
         *cmd = NULL;
@@ -196,20 +195,17 @@ static bool add_token_if_exists(int *token_num, int *total_token,
 static int get_redir(char *cmd_str, int start, Cmd *cmd) {
     int file_start = get_next_non_whitespace(cmd_str, start + 1);
     if (cmd_str[file_start] == '\0') {
-//        printf("Shell: missing redirection file\n");
         print_err();
         return -1;
     }
     int file_end = get_end_of_token(cmd_str, file_start + 1);
     char *file_name = str_cpy(cmd_str, file_start, file_end);
     if (file_name == NULL) {
-//        printf("Shell: Unable to allocate memory\n");
         print_err();
         return -1;
     }
 
     if (file_end - file_start > MAX_TOKEN_SIZE) {
-//        printf("Shell: Token exceeded max size limit.\n");
         print_err();
         return -1;
     }
@@ -221,7 +217,6 @@ static int get_redir(char *cmd_str, int start, Cmd *cmd) {
     }
 
     if (append_ll(cmd->redirections, redir) == FALSE) {
-//        printf("Shell: Unable to allocate memory\n");
         print_err();
         return -1;
     }
@@ -269,7 +264,6 @@ static Cmd *tokenize(char *line) {
                 total_token += 2;
             } else {
                 if (token_index >= MAX_TOKEN_SIZE) {
-//                    printf("Shell: Token exceeded max size limit.\n");
                     print_err();
                     dealloc_cmd_tok(&cmd, &token);
                     return NULL;

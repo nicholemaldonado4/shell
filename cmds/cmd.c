@@ -57,27 +57,3 @@ void dealloc_cmd_specific(Cmd *cmd) {
     free(cmd);
     cmd = NULL;
 }
-
-
-static void print_args(char **args) {
-    int i = 0;
-    printf("       args: {");
-    while (args[i] != NULL) {
-        printf("[%s]", args[i]);
-        i++;
-    }
-    printf("}\n");
-}
-
-void print_cmd(void *data) {
-    
-    Cmd *cmd = (Cmd *)data;
-    printf("    CMD:\n");
-    if (cmd != NULL) {
-        if (cmd->args != NULL) {
-            print_args(cmd->args);
-        }
-        
-        print_ll(cmd->redirections, print_redir);
-    }
-}

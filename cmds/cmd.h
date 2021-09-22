@@ -22,6 +22,4 @@ Cmd *create_empty_cmd();
 // Deallocates the cmd.
 void dealloc_cmd_specific(Cmd *cmd);
 
-void print_cmd(void *cmd);
-
 #endif
