@@ -10,6 +10,6 @@
 
 // Splits line by whitespace and returns its 
 // Cmd representation.
-Cmd *get_cmd(char *line);
+LList *get_cmds(char *line);
 
 #endif

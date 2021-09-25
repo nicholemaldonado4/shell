@@ -17,10 +17,10 @@
 static bool add_token(int token_num, int total_token, char *token, char **tokens);
 
 // Deallocates cmd and token.
-static void dealloc_cmd_tok(Cmd **cmd, char **token);
+static void dealloc_tok(char **token);
 
-// Initializes cmd and token.
-static bool init_cmd_tok(Cmd **cmd, char **token);
+// Initializes token.
+static bool init_tok(char **token);
 
 // Gets the next non-whitespace character in str.
 static int get_next_non_whitespace(char *str, int start);
@@ -34,6 +34,8 @@ static bool is_redir(char curr_char);
 // Checks if curr_char is whitespace.
 static bool is_space(char curr_char);
 
+static bool is_pipe(char curr_char);
+
 // Gets redir in cmd_str and adds it to cmd.
 static int get_redir(char *cmd_str, int start, Cmd *cmd);
 
@@ -45,7 +47,7 @@ static bool add_token_if_exists(int *token_num, int *total_token,
             int *token_index, char *token, char **args);
 
 // Tokenizes line into a Cmd.
-static Cmd *tokenize(char *line);
+static int tokenize(char *line, Cmd *cmd, char *token, int curr_index);
 
 /*
  * Adds token to tokens at token_num.
@@ -72,9 +74,7 @@ static bool add_token(int token_num, int total_token, char *token, char **tokens
  * Input: a pointer to a cmd and a pointer to a char *.
  * Output: None.
  */
-static void dealloc_cmd_tok(Cmd **cmd, char **token) {
-    dealloc_cmd_specific(*cmd);
-    *cmd = NULL;
+static void dealloc_tok(char **token) {
     free(*token);
     *token = NULL;
 }
@@ -85,18 +85,11 @@ static void dealloc_cmd_tok(Cmd **cmd, char **token) {
  * Output: true if successful, false if an error occurred while
  *         mallocing.
  */
-static bool init_cmd_tok(Cmd **cmd, char **token) {
-    *cmd = create_empty_cmd();    
-    if (*cmd == NULL) {
-        print_err();
-        return FALSE;
-    }
-
+static bool init_tok(char **token) {
+    // Initialize token that will hold the current argument.
     *token = (char *)malloc((MAX_TOKEN_SIZE + 1) * sizeof(char));
     if (*token == NULL) {
         print_err();
-        dealloc_cmd_specific(*cmd);
-        *cmd = NULL;
         return FALSE;
     }
     return TRUE;
@@ -122,7 +115,7 @@ static int get_next_non_whitespace(char *str, int start) {
  */
 static int get_end_of_token(char *str, int token_start) {
     while (str[token_start] != '\0') {
-        if (is_space(str[token_start]) || is_redir(str[token_start])) {
+        if (is_space(str[token_start]) || is_redir(str[token_start]) || is_pipe(str[token_start])) {
             return token_start;
         }
         token_start++;
@@ -147,6 +140,10 @@ static bool is_redir(char curr_char) {
  */
 static bool is_space(char curr_char) {
     return curr_char == ' ' || curr_char == '\n' || curr_char == '\t';
+}
+
+static bool is_pipe(char curr_char) {
+    return curr_char == '|';
 }
 
 /*
@@ -178,6 +175,9 @@ static bool add_token_if_exists(int *token_num, int *total_token,
         if (!add_token(*token_num, *total_token, token, args)) {
             return FALSE;
         }
+        
+        // Added token so incr total token and token num. reset
+        // token index.
         (*token_num)++;
         (*total_token)++;
         *token_index = 0;
@@ -193,6 +193,7 @@ static bool add_token_if_exists(int *token_num, int *total_token,
  *         file name. -1 if an error occurred.
  */
 static int get_redir(char *cmd_str, int start, Cmd *cmd) {
+    // Get the start and and of the file name for the redirection.
     int file_start = get_next_non_whitespace(cmd_str, start + 1);
     if (cmd_str[file_start] == '\0') {
         print_err();
@@ -210,12 +211,15 @@ static int get_redir(char *cmd_str, int start, Cmd *cmd) {
         return -1;
     }
     
+    // Create redirection with the file name and redirection type stored.
     Redirection *redir = create_redirection(file_name, get_redir_type(cmd_str[start]));
     if (redir == NULL) {
         free(file_name);
         return -1;
     }
-
+    
+    // Add it the command's llist of redirections. Order of these
+    // redirections matter.
     if (append_ll(cmd->redirections, redir) == FALSE) {
         print_err();
         return -1;
@@ -229,53 +233,102 @@ static int get_redir(char *cmd_str, int start, Cmd *cmd) {
  * Input: A line of tokens seperated by whitespace.
  * Output: A Cmd representation of the line.
  */
-static Cmd *tokenize(char *line) {
-    Cmd *cmd = NULL;
-    char *token = NULL;
-    if (!init_cmd_tok(&cmd, &token)) {
-        return NULL;
-    }
+static int tokenize(char *line, Cmd *cmd, char *token, int curr_index) {
+//    char *token = NULL;
+//    if (!init_tok(&token)) {
+//        return -1;
+//    }
     
-    int i = 0;
+//    int i = 0;
     int token_index = 0;
     
-    // curr token index in cmd->args
+    // curr token index in cmd->args.
     int token_num = 0;
     
-    // curr num of tokens seen.
+    // curr num of tokens seen. We cannot have more than MAX_NUM_TOKENS,
+    // so this makes sure that it does not exceed the limit. However, 
+    // tokens used for redirection are not added to cmd->args, so we 
+    // we need a seperate token_num to keep track of the current index
+    // that we are adding args to the command.
     int total_token = 0;
     
-    while (line[i] != '\0') {
-        char curr_char = line[i];
+    while (line[curr_index] != '\0' && !is_pipe(line[curr_index])) {
+        char curr_char = line[curr_index];
         if (is_space(curr_char)) {
+            // Add the token to the cmds->arg at token_index.
             if (!add_token_if_exists(&token_num, &total_token, &token_index, token, cmd->args)) {
-                dealloc_cmd_tok(&cmd, &token);
-                return NULL;
+//                dealloc_tok(&token);
+                return -1;
             }
-            i++;
+            curr_index++;
         } else {
+            // If starts with '<' or '>', create a Redirection instance
+            // to hold file name and redir type.
             if (is_redir(curr_char)) {
                 if (!add_token_if_exists(&token_num, &total_token, &token_index, token, cmd->args) ||
-                   (i = get_redir(line, i, cmd)) < 0) {
-                    dealloc_cmd_tok(&cmd, &token);
-                    return NULL;
+                   (curr_index = get_redir(line, curr_index, cmd)) < 0) {
+//                    dealloc_tok(&token);
+                    return -1;
                 }
                 // Add 2 for redir and for file name.
                 total_token += 2;
             } else {
+                // Otherwise, just add regular non whitespace token to args of cmd.
                 if (token_index >= MAX_TOKEN_SIZE) {
                     print_err();
-                    dealloc_cmd_tok(&cmd, &token);
-                    return NULL;
+//                    dealloc_tok(&token);
+                    return -1;
                 } 
                 token[token_index++] = curr_char;
-                i++;
+                curr_index++;
             }
         }
         
     }
-    free(token);
-    return cmd;
+//    free(token);
+    return curr_index;
+}
+
+static void dealloc_ll_tok(LList **list, char **token) {
+    if (*token != NULL) {
+        free(*token);
+        *token = NULL;
+    }
+//    if (*cmd != NULL) {
+//        dealloc_cmd_specific(*cmd);
+//        *cmd = NULL;
+//    }
+    if (*list != NULL) {
+        dealloc_ll(list, dealloc_cmd);
+    }
+}
+
+static int add_cmd(LList *cmds_ll, char *token, char *line, int curr_index, bool print_on_err) {
+    // Create empty command.
+    Cmd *cmd = create_empty_cmd();    
+    if (cmd == NULL) {
+        print_err();
+        return -1;
+    }
+
+    int last_char = tokenize(line, cmd, token, curr_index);
+    if (last_char < 0) {
+        dealloc_cmd_specific(cmd);
+        return last_char;
+    }
+
+    // If cmd does not have args and does not have redirs,
+    // deallocate and do nothing.
+    if (cmd->args[0] == NULL && is_empty_ll(cmd->redirections)) {
+        if (print_on_err) {
+            print_err();
+        }
+        dealloc_cmd_specific(cmd);
+        return -1;
+    }
+
+    append_ll(cmds_ll, cmd);
+    return last_char;
 }
 
 /*
@@ -283,14 +336,48 @@ static Cmd *tokenize(char *line) {
  * Input: Line with space seperated tokens.
  * Output: the Cmd or NULL.
  */
-Cmd *get_cmd(char *line) {
-    Cmd *cmd = tokenize(line);
-    if (cmd == NULL) {
+LList *get_cmds(char *line) {
+    char *token = NULL;
+    if (!init_tok(&token)) {
         return NULL;
     }
-    if (cmd->args[0] == NULL && is_empty_ll(cmd->redirections)) {
-        dealloc_cmd_specific(cmd);
+    
+    LList *cmds_ll = create_llist();
+    if (cmds_ll == NULL) {
+        free(token);
         return NULL;
     }
-    return cmd;
+    
+    int i = 0;
+    while (line[i] != '\0') {
+        i = get_next_non_whitespace(line, i);
+        if (line[i] == '\0') {
+            continue;
+        }
+        
+        if (is_pipe(line[i])) {
+            if (is_empty_ll(cmds_ll)) {
+                print_err();
+                dealloc_ll_tok(&cmds_ll, &token);
+                return NULL;
+            }
+            if ((i = add_cmd(cmds_ll, token, line, i + 1, TRUE)) < 0) {
+                dealloc_ll_tok(&cmds_ll, &token);
+                return NULL;
+            }
+            
+        } else if (!is_empty_ll(cmds_ll)) {
+            print_err();
+            dealloc_ll_tok(&cmds_ll, &token);
+            return NULL;
+        } else {
+            // Try to tokenize.
+            if ((i = add_cmd(cmds_ll, token, line, i, FALSE)) < 0) {
+                dealloc_ll_tok(&cmds_ll, &token);
+                return NULL;
+            }
+        }
+    }
+    free(token);
+    return cmds_ll;
 }

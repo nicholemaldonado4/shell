@@ -57,3 +57,13 @@ void dealloc_redirection(void **redir) {
 RedirType get_redir_type(char curr_char) {
     return curr_char == '>' ? OUTPUT : INPUT;
 }
+
+void print_redir(void *redir) {
+    Redirection *curr = (Redirection *)redir;
+    if (curr != NULL) {
+        char *type = (curr->type == INPUT) ? "input" : "output";
+    
+        printf("         Redirection: name: %s, type: %s\n", curr->name, type);
+    }
+    
+}

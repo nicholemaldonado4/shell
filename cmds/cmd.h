@@ -11,6 +11,7 @@
 #include "redirection.h"
 #include "llist.h"
 
+// Holds Cmd and its redirections and arguments.
 typedef struct Cmd {
     LList *redirections;
     char **args;
@@ -21,5 +22,9 @@ Cmd *create_empty_cmd();
 
 // Deallocates the cmd.
 void dealloc_cmd_specific(Cmd *cmd);
+
+void dealloc_cmd(void **data);
+
+void print_cmd(void *cmd);
 
 #endif

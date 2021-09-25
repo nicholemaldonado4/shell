@@ -10,6 +10,6 @@
 
 // Forks() a child to execute the command
 // with its args.
-bool execute(Cmd *cmd);
+bool execute(LList *cmds);
 
 #endif

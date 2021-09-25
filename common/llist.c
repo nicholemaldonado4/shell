@@ -51,22 +51,6 @@ bool append_ll(LList *list, void *new_val) {
     return TRUE;
 }
 
-static void print_node(Node *node, void (*print_func)(void *)) {
-    if (node == NULL) {
-        return;
-    }
-    if (node->val != NULL) {
-        (*print_func)(node->val);
-    }
-    
-    
-    print_node(node->next, print_func);
-}
-
-void print_ll(LList *list, void (*print_func)(void *)) {
-    print_node(list->head, print_func);
-}
-
 /*
  * Deallocates the linked list.
  * Input: The linked list and deallocator function
@@ -80,6 +64,8 @@ void dealloc_ll(LList **list, void (*dealloc_func)(void **)) {
     Node *curr = (*list)->head;
     while (curr != NULL) {
         Node *next_node = curr->next;
+        
+        // deallocates value.
         dealloc_func(&(curr->val));
         free(curr);
         curr = next_node;
@@ -95,4 +81,24 @@ void dealloc_ll(LList **list, void (*dealloc_func)(void **)) {
  */
 bool is_empty_ll(LList *list) {
     return list == NULL || list->head == NULL;
+}
+
+bool has_one_node(LList *list) {
+    return list != NULL && list->head != NULL && list->head == list->tail;
+}
+
+static void print_node(Node *node, void (*print_func)(void *)) {
+    if (node == NULL) {
+        return;
+    }
+    if (node->val != NULL) {
+        (*print_func)(node->val);
+    }
+    
+    
+    print_node(node->next, print_func);
+}
+
+void print_ll(LList *list, void (*print_func)(void *)) {
+    print_node(list->head, print_func);
 }

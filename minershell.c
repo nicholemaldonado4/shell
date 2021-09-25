@@ -31,12 +31,15 @@ static void run();
  *         or FALSE otherwise.
  */
 static bool parse_and_exec(char *cmd_str) {
-    Cmd *cmd = get_cmd(cmd_str);
-    if (cmd == NULL) {
+    // Tokenize and get cmd.
+    LList *cmds = get_cmds(cmd_str);
+    if (cmds == NULL || is_empty_ll(cmds)) {
         return FALSE;
     }
-    bool end_shell = execute(cmd);
-    dealloc_cmd_specific(cmd);
+
+    // Run the command.
+    bool end_shell = execute(cmds);
+    dealloc_ll(&cmds, dealloc_cmd);
     return end_shell;
 }
 

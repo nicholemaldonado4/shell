@@ -24,12 +24,14 @@ LList *create_llist();
 // Appends new_val to the list.
 bool append_ll(LList *list, void *new_val);
 
-void print_ll(LList *list, void (*print_func)(void *));
-
 // Deallocates the linked list.
 void dealloc_ll(LList **list, void (*dealloc_func)(void **));
 
 // Checks if list is empty.
 bool is_empty_ll(LList *list);
+
+bool has_one_node(LList *list);
+
+void print_ll(LList *list, void (*print_func)(void *));
 
 #endif

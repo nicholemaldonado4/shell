@@ -19,6 +19,9 @@ Cmd *create_empty_cmd() {
     if (cmd == NULL) {
         return NULL;
     }
+    
+    // Set command args to be MAX_NUM_TOKENS + 1 since args must
+    // always end in NULL.
     cmd->args = (char **)malloc((MAX_NUM_TOKENS + 1) * sizeof(char *));
     if (cmd->args == NULL) {
         free(cmd);
@@ -26,6 +29,7 @@ Cmd *create_empty_cmd() {
     }
     *(cmd->args) = NULL;
     
+    // Each command can have a list of redirections.
     cmd->redirections = create_llist();
     if (cmd->redirections == NULL) {
         free(cmd->args);
@@ -42,10 +46,12 @@ Cmd *create_empty_cmd() {
  * Output: None.
  */
 void dealloc_cmd_specific(Cmd *cmd) {
+    // Clean llist of redirections.
     if (cmd->redirections != NULL) {
         dealloc_ll(&(cmd->redirections), dealloc_redirection);
     }
     
+    // Clean args.
     if (cmd->args != NULL) {
         int i = 0;
         while (cmd->args[i] != NULL) {
@@ -54,6 +60,34 @@ void dealloc_cmd_specific(Cmd *cmd) {
         }
         free(cmd->args);
     }
+    
+    // Clean cmd.
     free(cmd);
     cmd = NULL;
+}
+
+void dealloc_cmd(void **data) {
+    dealloc_cmd_specific((Cmd *)(*data));
+    *data = NULL;
+}
+
+static void print_args(char **args) {
+     int i = 0;
+     printf("       args: {");
+     while (args[i] != NULL) {
+         printf("[%s]", args[i]);
+         i++;
+     }
+     printf("}\n");
+ }
+
+void print_cmd(void *data) {
+    Cmd *cmd = (Cmd *)data;
+    printf("    CMD:\n");
+    if (cmd != NULL) {
+        if (cmd->args != NULL) {
+            print_args(cmd->args);
+        }
+        print_ll(cmd->redirections, print_redir);
+    }
 }

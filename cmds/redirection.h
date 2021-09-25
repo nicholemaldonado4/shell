@@ -11,6 +11,7 @@ typedef enum  {
     OUTPUT
 } RedirType;
 
+// Holds a redirection with its filename and type.
 typedef struct Redirection {
     char *name;
     RedirType type;
@@ -25,5 +26,7 @@ void dealloc_redirection(void **redir);
 
 // Gets the redirection type.
 RedirType get_redir_type(char curr_char);
+
+void print_redir(void *redir);
 
 #endif
