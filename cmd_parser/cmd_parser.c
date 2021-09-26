@@ -12,15 +12,10 @@
 #include "err_msg.h"
 #include "shell_consts.h"
 #include "str_utils.h"
+#include "tok_utils.h"
 
-// Adds token to tokens at token_num.
-static bool add_token(int token_num, int total_token, char *token, char **tokens);
-
-// Deallocates cmd and token.
-static void dealloc_tok(char **token);
-
-// Initializes token.
-static bool init_tok(char **token);
+// Adds tok_utils' token to tokens at token_num.
+static bool add_token(int token_num, TokenizeUtils *tok_util, char **tokens);
 
 // Gets the next non-whitespace character in str.
 static int get_next_non_whitespace(char *str, int start);
@@ -34,6 +29,7 @@ static bool is_redir(char curr_char);
 // Checks if curr_char is whitespace.
 static bool is_space(char curr_char);
 
+// Checks if curr_char is a pipe symbol
 static bool is_pipe(char curr_char);
 
 // Gets redir in cmd_str and adds it to cmd.
@@ -42,58 +38,41 @@ static int get_redir(char *cmd_str, int start, Cmd *cmd);
 // Creates new str and copies str from start to end.
 static char *str_cpy(char *str, int start, int end);
 
-// Adds token to args at token_num if token has at least one char.
-static bool add_token_if_exists(int *token_num, int *total_token, 
-            int *token_index, char *token, char **args);
+// Adds tok_utils's token to args at token_num if token has at least one char.
+static bool add_token_if_exists(int *token_num, int *token_index, 
+        TokenizeUtils *tok_utils, char **args);
 
-// Tokenizes line into a Cmd.
-static int tokenize(char *line, Cmd *cmd, char *token, int curr_index);
+// Tokenizes line and stores in cmd.
+static int tokenize(Cmd *cmd, TokenizeUtils *tok_utils, int curr_index);
+
+// Deallocates list and tok_utils.
+static void dealloc_ll_tok(LList **list, TokenizeUtils **tok_utils);
+
+// Adds cmd from tok_util's line starting at curr_index to cmds_ll.
+static int add_cmd(LList *cmds_ll, TokenizeUtils *tok_utils, 
+        int curr_index, bool print_on_err);
 
 /*
- * Adds token to tokens at token_num.
- * Input: token which will be added to tokens at token_num.
- *        Will only be added if total_token is less than MAX_NUM_TOKENS.
+ * Adds tok_util's token to tokens at token_num.
+ * Input: tok_utils whose token which will be added to tokens at token_num.
+ *        Will only be added if tok_utils' total_token is less than 
+ *        MAX_NUM_TOKENS.
  * Output: TRUE if the add was successful, false otherwise.
  */
-static bool add_token(int token_num, int total_token, char *token, char **tokens) {
-    if (total_token >= MAX_NUM_TOKENS) {
+static bool add_token(int token_num, TokenizeUtils *tok_util, char **tokens) {
+    if (tok_util->total_tokens >= MAX_NUM_TOKENS) {
         print_err();
         return FALSE;
     }
-    tokens[token_num] = strdup(token);
+    tokens[token_num] = strdup(tok_util->token);
     tokens[token_num + 1] = NULL;
-    if (tokens == NULL) {
+    if (tokens[token_num] == NULL) {
         print_err();
         return FALSE;
     }
     return TRUE;
 }
 
-/*
- * Deallocates cmd and token.
- * Input: a pointer to a cmd and a pointer to a char *.
- * Output: None.
- */
-static void dealloc_tok(char **token) {
-    free(*token);
-    *token = NULL;
-}
-
-/*
- * Initializes cmd and token.
- * Input: a pointer to a cmd and a pointer to a char *.
- * Output: true if successful, false if an error occurred while
- *         mallocing.
- */
-static bool init_tok(char **token) {
-    // Initialize token that will hold the current argument.
-    *token = (char *)malloc((MAX_TOKEN_SIZE + 1) * sizeof(char));
-    if (*token == NULL) {
-        print_err();
-        return FALSE;
-    }
-    return TRUE;
-}
 
 /*
  * Gets the index of the next non whitespace char in str.
@@ -115,7 +94,9 @@ static int get_next_non_whitespace(char *str, int start) {
  */
 static int get_end_of_token(char *str, int token_start) {
     while (str[token_start] != '\0') {
-        if (is_space(str[token_start]) || is_redir(str[token_start]) || is_pipe(str[token_start])) {
+        if (is_space(str[token_start]) || 
+            is_redir(str[token_start]) || 
+            is_pipe(str[token_start])) {
             return token_start;
         }
         token_start++;
@@ -132,7 +113,6 @@ static bool is_redir(char curr_char) {
     return (curr_char == '>' || curr_char == '<');
 }
 
-
 /*
  * Checks if curr_char is a space.
  * Input: the current char.
@@ -142,6 +122,11 @@ static bool is_space(char curr_char) {
     return curr_char == ' ' || curr_char == '\n' || curr_char == '\t';
 }
 
+/*
+ * Checks if curr_char is a pipe.
+ * Input: the current char.
+ * Output: True if the current char is a pipe, false otherwise.
+ */
 static bool is_pipe(char curr_char) {
     return curr_char == '|';
 }
@@ -162,24 +147,23 @@ static char *str_cpy(char *str, int start, int end) {
 }
 
 /*
- * Adds the token to args at token_num if token_index > 0.
+ * Adds the tok_utils' token to args at token_num if token_index > 0.
  * Input: token_num is where the token will be added at args.
- *        total_token is the max number of tokens seen. token_index
- *        is the index of the end of token.
+ *        token_index is the index of the end of tok_utils' token.
  * Output: TRUE if successful and FAlSE if any error occurred.
  */
-static bool add_token_if_exists(int *token_num, int *total_token, 
-            int *token_index, char *token, char **args) {
+static bool add_token_if_exists(int *token_num, 
+            int *token_index, TokenizeUtils *tok_utils, char **args) {
     if (*token_index != 0) {
-        token[*token_index] = '\0';
-        if (!add_token(*token_num, *total_token, token, args)) {
+        tok_utils->token[*token_index] = '\0';
+        if (!add_token(*token_num, tok_utils, args)) {
             return FALSE;
         }
         
-        // Added token so incr total token and token num. reset
+        // Added token so incr total token and token num. Reset
         // token index.
         (*token_num)++;
-        (*total_token)++;
+        tok_utils->total_tokens += 1;
         *token_index = 0;
     }
     return TRUE;
@@ -230,88 +214,97 @@ static int get_redir(char *cmd_str, int start, Cmd *cmd) {
 /*
  * Splits the line by whitespace, stores tokens, and
  * redirections in a Cmd.
- * Input: A line of tokens seperated by whitespace.
- * Output: A Cmd representation of the line.
+ * Input: A line of tokens seperated by whitespace. curr_index
+ *        is where we will start to tokenize the line. tok_utils
+ *        contains the current total number of tokens. This is important
+ *        since we can only have a fixed maximum number of tokens per line.
+ *        tok_utils also contains the token buffer to store tokens that are
+ *        being made. Cmd will be populated with args and redirections from
+ *        line starting from curr_index.
+ * Output: Index of the end of the cmd in line. -1 if error.
  */
-static int tokenize(char *line, Cmd *cmd, char *token, int curr_index) {
-//    char *token = NULL;
-//    if (!init_tok(&token)) {
-//        return -1;
-//    }
-    
-//    int i = 0;
+static int tokenize(Cmd *cmd, TokenizeUtils *tok_utils, int curr_index) {
     int token_index = 0;
     
     // curr token index in cmd->args.
     int token_num = 0;
     
-    // curr num of tokens seen. We cannot have more than MAX_NUM_TOKENS,
-    // so this makes sure that it does not exceed the limit. However, 
-    // tokens used for redirection are not added to cmd->args, so we 
-    // we need a seperate token_num to keep track of the current index
-    // that we are adding args to the command.
-    int total_token = 0;
-    
-    while (line[curr_index] != '\0' && !is_pipe(line[curr_index])) {
-        char curr_char = line[curr_index];
-        if (is_space(curr_char)) {
+    while (tok_utils->line[curr_index] != '\0') {
+        char curr_char = tok_utils->line[curr_index];
+        bool curr_is_pipe = FALSE;
+        if (is_space(curr_char) || (curr_is_pipe = is_pipe(curr_char))) {
             // Add the token to the cmds->arg at token_index.
-            if (!add_token_if_exists(&token_num, &total_token, &token_index, token, cmd->args)) {
-//                dealloc_tok(&token);
+            if (!add_token_if_exists(&token_num, &token_index, tok_utils, cmd->args)) {
                 return -1;
+            }
+            if (curr_is_pipe) {
+                return curr_index;
             }
             curr_index++;
         } else {
             // If starts with '<' or '>', create a Redirection instance
             // to hold file name and redir type.
             if (is_redir(curr_char)) {
-                if (!add_token_if_exists(&token_num, &total_token, &token_index, token, cmd->args) ||
-                   (curr_index = get_redir(line, curr_index, cmd)) < 0) {
-//                    dealloc_tok(&token);
+                if (!add_token_if_exists(&token_num, &token_index, tok_utils, cmd->args) ||
+                   (curr_index = get_redir(tok_utils->line, curr_index, cmd)) < 0) {
                     return -1;
                 }
                 // Add 2 for redir and for file name.
-                total_token += 2;
+                tok_utils->total_tokens += 2;
             } else {
                 // Otherwise, just add regular non whitespace token to args of cmd.
                 if (token_index >= MAX_TOKEN_SIZE) {
                     print_err();
-//                    dealloc_tok(&token);
                     return -1;
                 } 
-                token[token_index++] = curr_char;
+                tok_utils->token[token_index++] = curr_char;
                 curr_index++;
             }
         }
         
     }
-//    free(token);
     return curr_index;
 }
 
-static void dealloc_ll_tok(LList **list, char **token) {
-    if (*token != NULL) {
-        free(*token);
-        *token = NULL;
+/*
+ * Deallocates list and tok_utils.
+ * Input: A llist of cmds and tok_utils.
+ * Output: NONE.
+ */
+static void dealloc_ll_tok(LList **list, TokenizeUtils **tok_utils) {
+    if (*tok_utils != NULL) {
+        dealloc_tok_utils(tok_utils);
     }
-//    if (*cmd != NULL) {
-//        dealloc_cmd_specific(*cmd);
-//        *cmd = NULL;
-//    }
     if (*list != NULL) {
         dealloc_ll(list, dealloc_cmd);
     }
 }
 
-static int add_cmd(LList *cmds_ll, char *token, char *line, int curr_index, bool print_on_err) {
-    // Create empty command.
-    Cmd *cmd = create_empty_cmd();    
+/*
+ * Adds a new command to cmds_ll based on the command
+ * parsed from tok_utils' line starting at curr_index.
+ * If print_on_err, an error message will be printed for 
+ * empty commands.
+ * Input: A llist of cmds, tok_utils, the curr_index of
+ *        the start of the command, and wheter to print
+ *        an error message for empty commands.
+ * Output: NONE.
+ */
+static int add_cmd(LList *cmds_ll, TokenizeUtils *tok_utils, int curr_index, bool print_on_err) {
+    
+    // Create empty command. We can at max have MAX_NUM_TOKENS. If
+    // we have already created some commands with tokens, then we
+    // can at maximum have a command with MAX_NUM_TOKENS - total number
+    // of tokens seen so far.
+    Cmd *cmd = create_empty_cmd(MAX_NUM_TOKENS - tok_utils->total_tokens);    
     if (cmd == NULL) {
         print_err();
         return -1;
     }
-
-    int last_char = tokenize(line, cmd, token, curr_index);
+    
+    // Tokenize tok_utils's line from curr_index to the end of the line
+    // or until the first pipe seen. Store the results in cmd.
+    int last_char = tokenize(cmd, tok_utils, curr_index);
     if (last_char < 0) {
         dealloc_cmd_specific(cmd);
         return last_char;
@@ -332,22 +325,22 @@ static int add_cmd(LList *cmds_ll, char *token, char *line, int curr_index, bool
 }
 
 /*
- * Creates a Cmd based on the line.
- * Input: Line with space seperated tokens.
+ * Creates a LList of commands parsed from the line.
+ * Input: Line with space seperated tokens. Cmds are seperated by pipes.
  * Output: the Cmd or NULL.
  */
 LList *get_cmds(char *line) {
-    char *token = NULL;
-    if (!init_tok(&token)) {
+    TokenizeUtils *tok_utils = create_tok_utils(line);
+    if (tok_utils == NULL) {
         return NULL;
     }
     
     LList *cmds_ll = create_llist();
     if (cmds_ll == NULL) {
-        free(token);
+        dealloc_tok_utils(&tok_utils);
         return NULL;
     }
-    
+
     int i = 0;
     while (line[i] != '\0') {
         i = get_next_non_whitespace(line, i);
@@ -355,29 +348,37 @@ LList *get_cmds(char *line) {
             continue;
         }
         
+        // If character is a pipe, create a command that
+        // stores all the parsed args/redirections in lines
+        // starting at i + 1. Store until the end of line or '|'.
         if (is_pipe(line[i])) {
+            tok_utils->total_tokens += 1;
+            
+            // Prevent '|' at start of line.
             if (is_empty_ll(cmds_ll)) {
                 print_err();
-                dealloc_ll_tok(&cmds_ll, &token);
+                dealloc_ll_tok(&cmds_ll, &tok_utils);
                 return NULL;
             }
-            if ((i = add_cmd(cmds_ll, token, line, i + 1, TRUE)) < 0) {
-                dealloc_ll_tok(&cmds_ll, &token);
+            if ((i = add_cmd(cmds_ll, tok_utils, i + 1, TRUE)) < 0) {
+                dealloc_ll_tok(&cmds_ll, &tok_utils);
                 return NULL;
             }
-            
+        
+        // The first word in the input should not start with a pipe
+        // and the llist should not be allocated yet.
         } else if (!is_empty_ll(cmds_ll)) {
             print_err();
-            dealloc_ll_tok(&cmds_ll, &token);
+            dealloc_ll_tok(&cmds_ll, &tok_utils);
             return NULL;
         } else {
             // Try to tokenize.
-            if ((i = add_cmd(cmds_ll, token, line, i, FALSE)) < 0) {
-                dealloc_ll_tok(&cmds_ll, &token);
+            if ((i = add_cmd(cmds_ll, tok_utils, i, FALSE)) < 0) {
+                dealloc_ll_tok(&cmds_ll, &tok_utils);
                 return NULL;
             }
         }
     }
-    free(token);
+    dealloc_tok_utils(&tok_utils);
     return cmds_ll;
 }

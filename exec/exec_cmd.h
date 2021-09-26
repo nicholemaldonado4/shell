@@ -8,8 +8,7 @@
 #include "bool.h"
 #include "cmd.h"
 
-// Forks() a child to execute the command
-// with its args.
+// Forks() a child to execute the commands.
 bool execute(LList *cmds);
 
 #endif

@@ -14,7 +14,7 @@
  * Input: None.
  * Output: The allocated command.
  */
-Cmd *create_empty_cmd() {
+Cmd *create_empty_cmd(int num_tokens) {
     Cmd *cmd = (Cmd *)malloc(sizeof(Cmd));
     if (cmd == NULL) {
         return NULL;
@@ -22,7 +22,7 @@ Cmd *create_empty_cmd() {
     
     // Set command args to be MAX_NUM_TOKENS + 1 since args must
     // always end in NULL.
-    cmd->args = (char **)malloc((MAX_NUM_TOKENS + 1) * sizeof(char *));
+    cmd->args = (char **)malloc((num_tokens + 1) * sizeof(char *));
     if (cmd->args == NULL) {
         free(cmd);
         return NULL;

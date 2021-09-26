@@ -18,7 +18,7 @@ typedef struct Cmd {
 } Cmd;
 
 // Creates an empty cmd.
-Cmd *create_empty_cmd();
+Cmd *create_empty_cmd(int num_tokens);
 
 // Deallocates the cmd.
 void dealloc_cmd_specific(Cmd *cmd);

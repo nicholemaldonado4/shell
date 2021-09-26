@@ -8,8 +8,7 @@
 
 #include "cmd.h"
 
-// Splits line by whitespace and returns its 
-// Cmd representation.
+// Parses cmds from line and stores in a LList.
 LList *get_cmds(char *line);
 
 #endif
