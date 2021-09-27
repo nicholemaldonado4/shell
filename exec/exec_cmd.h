@@ -1,6 +1,6 @@
 // Nichole Maldonado
 // This file is a header for exec_cmd which
-// forks() a child to execute the provided command.
+// fork()s children to execute the provided commands.
 
 #ifndef EXEC_CMD_H
 #define EXEC_CMD_H
@@ -8,7 +8,7 @@
 #include "bool.h"
 #include "cmd.h"
 
-// Forks() a child to execute the commands.
+// Forks() children to execute the commands.
 bool execute(LList *cmds);
 
 #endif

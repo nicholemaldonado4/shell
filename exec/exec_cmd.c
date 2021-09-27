@@ -1,6 +1,6 @@
 // Nichole Maldonado
-// This file forks() a child
-// to execute the provided command.
+// This file forks() children processes
+// to execute the provided commands.
 
 #include "exec_cmd.h"
 
@@ -18,8 +18,11 @@
 #include "shell_consts.h"
 #include "str_utils.h"
 
-// Changes directory.
-static void change_directory(Cmd *cmd);
+// Changes directory to dir.
+static bool change_dir(char *dir);
+
+// Starts the cd execution.
+static void exec_cd(Cmd *cmd);
 
 // Runs the executable based on args.
 static void run_executable(char **args);
@@ -27,10 +30,21 @@ static void run_executable(char **args);
 // Sets up redirections for the current process.
 static bool setup_redirs(LList *redirs, bool set_err_only);
 
-// Forks child to run executable.
+// Sets up child process for execution.
+static void setup_child_exec(Node *curr_node, int fd[2], int prev_read_fd);
+
+// Forks children process and connects multiple children with pipes.
+static void spawn_execs(LList *cmds);
+
+// Runner code to fork children and wait for forked children.
 static void execute_cmds(LList *cmds);
 
-static bool changed_dir(char *dir) {
+/*
+ * Changes the directory to dir.
+ * Input: dir that the current directory will be changed to.
+ * Output: None.
+ */
+static bool change_dir(char *dir) {
     // Do not support 'cd' command with no args.
     if (dir == NULL || chdir(dir) < 0) {
         print_err();
@@ -47,7 +61,7 @@ static bool changed_dir(char *dir) {
  *        "cd" command.
  * Output: None.
  */
-static void change_directory(Cmd *cmd) {
+static void exec_cd(Cmd *cmd) {
     
     // Assumes STDERR_FILENO exists when we first run the program.
     // Keep copy of old one, setup_redirs may change it. NOTE: In UNIX
@@ -62,27 +76,11 @@ static void change_directory(Cmd *cmd) {
         close(old_err_fd);
         return;
     }
-    if (!changed_dir(cmd->args[1])) {
+    if (!change_dir(cmd->args[1])) {
         dup2(old_err_fd, STDERR_FILENO);
         close(old_err_fd);
         return;
     }
-    
-//    // Do not support 'cd' command with no args.
-//    if (cmd->args[1] == NULL) {
-//        print_err();
-//        dup2(old_err_fd, STDERR_FILENO);
-//        close(old_err_fd);
-//        return;
-//    }
-//    
-//    // Change directory.
-//    if (chdir(cmd->args[1]) < 0) {
-//        print_err();
-//        dup2(old_err_fd, STDERR_FILENO);
-//        close(old_err_fd);
-//        return;
-//    }
     
     // Restore original standard error.
     dup2(old_err_fd, STDERR_FILENO);
@@ -187,12 +185,18 @@ static void setup_child_exec(Node *curr_node, int fd[2], int prev_read_fd) {
         exit(1);
     }
     
-    // If the cmd is a shell command (cd, exit) or empty, then ignore it.
+    // If the cmd is exit or empty, then ignore it. If
+    // cmd is cd still implement it in child process to 
+    // follow how UNIX follows cd in pipes. In UNIX the
+    // cd command willl still be executed in the child process
+    // but we won't see this cd in the parent process. We still
+    // use the cd to print an error if the dir does not exist.
+    // See test cases for more information.
     if (cmd->args[0] == NULL || 
         strcmp(cmd->args[0], EXIT_CMD) == 0) {
         exit(0);
     } else if (strcmp(cmd->args[0], CD_CMD) == 0) {
-        if (!changed_dir(cmd->args[1])) {
+        if (!change_dir(cmd->args[1])) {
             exit(1);
         }
         exit(0);
@@ -203,11 +207,10 @@ static void setup_child_exec(Node *curr_node, int fd[2], int prev_read_fd) {
 }
 
 /*
- * Execute the command in args[0]. Forks children processes
+ * Execute the commands in cmds. Forks children processes
  * and pipes multiple processes if they exit.
- *
  * Input: cmds which is a LList of Cmds to execute.
- * Output: Null.
+ * Output: None.
  */
 static void spawn_execs(LList *cmds) {
     int fd[2];
@@ -247,6 +250,11 @@ static void spawn_execs(LList *cmds) {
     }
 }
 
+/*
+ * Spawns processes to execute all the cmds.
+ * Input: cmds which is a list of Cmds.
+ * Output: None.
+ */
 static void execute_cmds(LList *cmds) {
     spawn_execs(cmds);
     
@@ -255,12 +263,9 @@ static void execute_cmds(LList *cmds) {
 }
 
 /*
- * Execute the command in args[0]. Forks
- * a child process to execute the command. The
- * parent waits for the child to finish.
- * Input: args which holds the command name
- *        followed by the arguments.
- * Output: Null.
+ * Executes commands in cmds.
+ * Input: cmds which is a list of Cmds.
+ * Output: returns TRUE for exit and FALSE otherwise.
  */
 bool execute(LList *cmds) {
     if (has_one_node(cmds)) {
@@ -279,7 +284,7 @@ bool execute(LList *cmds) {
             dup2(old_err_fd, STDERR_FILENO);
             return FALSE;
         } else if (strcmp(cmd->args[0], CD_CMD) == 0) {
-            change_directory(cmd);
+            exec_cd(cmd);
             return FALSE;
         } else if (strcmp(cmd->args[0], EXIT_CMD) == 0) {
 

@@ -1,6 +1,6 @@
 // Nichole Maldonado
 // This file runs the main shell, which
-// gets a command and executes it.
+// gets commands and executes them.
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -31,13 +31,13 @@ static void run();
  *         or FALSE otherwise.
  */
 static bool parse_and_exec(char *cmd_str) {
-    // Tokenize and get cmd.
+    // Tokenize and get cmds.
     LList *cmds = get_cmds(cmd_str);
     if (cmds == NULL || is_empty_ll(cmds)) {
         return FALSE;
     }
 
-    // Run the command.
+    // Run the commands.
     bool end_shell = execute(cmds);
     dealloc_ll(&cmds, dealloc_cmd);
     return end_shell;

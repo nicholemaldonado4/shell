@@ -66,6 +66,13 @@ void dealloc_cmd_specific(Cmd *cmd) {
     cmd = NULL;
 }
 
+/*
+ * Deallocates the cmd specified by *data.
+ * This function is used when deallocating a LList
+ * of commands.
+ * Input: The cmd to deallocate.
+ * Output: None.
+ */
 void dealloc_cmd(void **data) {
     dealloc_cmd_specific((Cmd *)(*data));
     *data = NULL;

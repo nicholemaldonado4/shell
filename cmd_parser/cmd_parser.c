@@ -204,7 +204,7 @@ static int get_redir(char *cmd_str, int start, Cmd *cmd) {
     
     // Add it the command's llist of redirections. Order of these
     // redirections matter.
-    if (append_ll(cmd->redirections, redir) == FALSE) {
+    if (!append_ll(cmd->redirections, redir)) {
         print_err();
         return -1;
     }
@@ -272,12 +272,8 @@ static int tokenize(Cmd *cmd, TokenizeUtils *tok_utils, int curr_index) {
  * Output: NONE.
  */
 static void dealloc_ll_tok(LList **list, TokenizeUtils **tok_utils) {
-    if (*tok_utils != NULL) {
-        dealloc_tok_utils(tok_utils);
-    }
-    if (*list != NULL) {
-        dealloc_ll(list, dealloc_cmd);
-    }
+    dealloc_tok_utils(tok_utils);
+    dealloc_ll(list, dealloc_cmd);
 }
 
 /*
@@ -320,13 +316,18 @@ static int add_cmd(LList *cmds_ll, TokenizeUtils *tok_utils, int curr_index, boo
         return -1;
     }
 
-    append_ll(cmds_ll, cmd);
+    if (!append_ll(cmds_ll, cmd)) {
+        print_err();
+        dealloc_cmd_specific(cmd);
+        return -1;
+    }
     return last_char;
 }
 
 /*
  * Creates a LList of commands parsed from the line.
- * Input: Line with space seperated tokens. Cmds are seperated by pipes.
+ * Input: Line with space seperated tokens. Cmds are 
+ *        seperated by pipes.
  * Output: the Cmd or NULL.
  */
 LList *get_cmds(char *line) {
@@ -360,6 +361,9 @@ LList *get_cmds(char *line) {
                 dealloc_ll_tok(&cmds_ll, &tok_utils);
                 return NULL;
             }
+            
+            // We pass TRUE because the cmd should not be empty, 
+            // so print err if it is.
             if ((i = add_cmd(cmds_ll, tok_utils, i + 1, TRUE)) < 0) {
                 dealloc_ll_tok(&cmds_ll, &tok_utils);
                 return NULL;

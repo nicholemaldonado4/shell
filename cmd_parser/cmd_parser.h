@@ -1,7 +1,7 @@
 // Nichole Maldonado
 // This file is the header for a tokenizer
 // which takes a string, splits it by 
-// whitespace, and creates a command.
+// whitespace, and creates a list of commands.
 
 #ifndef CMD_PARSER_H
 #define CMD_PARSER_H
