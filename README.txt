@@ -18,4 +18,4 @@ When you want to exit, enter "exit".
 
 Specify redirections using the ">" or "<". A file name must also follow the symbols otherwise an error will be printed to the screen.
 
-The shell also supports piping of multiple commands. Use '|' to pipe commands. '|' can not exist at the beginning  or end of a line.
+The shell also supports piping of multiple commands. Use '|' to pipe commands. '|' can not exist at the beginning or end of a line.

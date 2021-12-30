@@ -45,7 +45,7 @@ void dealloc_tok_utils(TokenizeUtils **tok_utils) {
     }
     
     // Intentionally do not deallocate line since
-    // we did not malloc data for it specifically.
+    // we did not malloc data for line.
     (*tok_utils)->line = NULL;
     free(*tok_utils);
     *tok_utils = NULL;

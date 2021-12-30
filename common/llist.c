@@ -83,22 +83,11 @@ bool is_empty_ll(LList *list) {
     return list == NULL || list->head == NULL;
 }
 
+/*
+ * Checks if the linked list only has one node.
+ * Input: The linked list.
+ * Output: True if the list only has one node.
+ */
 bool has_one_node(LList *list) {
     return list != NULL && list->head != NULL && list->head == list->tail;
-}
-
-static void print_node(Node *node, void (*print_func)(void *)) {
-    if (node == NULL) {
-        return;
-    }
-    if (node->val != NULL) {
-        (*print_func)(node->val);
-    }
-    
-    
-    print_node(node->next, print_func);
-}
-
-void print_ll(LList *list, void (*print_func)(void *)) {
-    print_node(list->head, print_func);
 }

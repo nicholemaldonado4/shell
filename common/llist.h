@@ -30,8 +30,7 @@ void dealloc_ll(LList **list, void (*dealloc_func)(void **));
 // Checks if list is empty.
 bool is_empty_ll(LList *list);
 
+// Checks if the linked list only has one node.
 bool has_one_node(LList *list);
-
-void print_ll(LList *list, void (*print_func)(void *));
 
 #endif

@@ -26,6 +26,4 @@ void dealloc_cmd_specific(Cmd *cmd);
 // Deallocates the cmd represented by *data.
 void dealloc_cmd(void **data);
 
-void print_cmd(void *cmd);
-
 #endif

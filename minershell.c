@@ -24,7 +24,7 @@ static void run();
 
 /*
  * Makes the cmd_str tokenized and then calls to
- * execute the command.
+ * execute the commands.
  * Input: cmd_str which is string of tokens.
  *        Tokens are seperated by whitespace.
  * Output: TRUE if it is time to exit the shell
@@ -45,8 +45,8 @@ static bool parse_and_exec(char *cmd_str) {
 
 
 /*
- * Gets a command from the user until an "exit" command
- * is executed or an EOF is reached. For every command,
+ * Gets commands from the user until an "exit" command
+ * is executed or an EOF is reached. For every line,
  * it sent to parsed and executed.
  * Input: None.
  * Output: None.
@@ -85,9 +85,9 @@ static void run() {
 }
 
 /*
- * Runs main interactive shell that gets a user command,
- * forks a child, has the child call the executable, and
- * wait for the child to complete.
+ * Runs main interactive shell that gets user commands,
+ * forks children, has the children call the executables, and
+ * wait for the children to complete.
  * Input: None.
  * Output: None.
  */

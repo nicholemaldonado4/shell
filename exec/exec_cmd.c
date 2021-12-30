@@ -185,9 +185,9 @@ static void setup_child_exec(Node *curr_node, int fd[2], int prev_read_fd) {
         exit(1);
     }
     
-    // If the cmd is exit or empty, then ignore it. If
-    // cmd is cd still implement it in child process to 
-    // follow how UNIX follows cd in pipes. In UNIX the
+    // If the cmd is exit or empty(has redirs only), then ignore 
+    // it. If cmd is cd still implement it in child process to 
+    // follow how UNIX follows cd in pipes. In UNIX, the
     // cd command willl still be executed in the child process
     // but we won't see this cd in the parent process. We still
     // use the cd to print an error if the dir does not exist.
@@ -223,12 +223,26 @@ static void spawn_execs(LList *cmds) {
         // Create pipes for all but the last command.
         if (curr_node->next != NULL && pipe(fd) < 0) {
             print_err();
+            // Clean up on error.
+            if (prev_read_fd >= 0) {
+                close(prev_read_fd);
+            }
             return;
         }
         
         int rc = fork();
         if (rc < 0) {
             print_err();
+            
+            // Clean up parent extra file descriptors on error.
+            if (curr_node->next != NULL) {
+                close(fd[0]);
+                close(fd[1]);
+            }
+            // NOTE: prev_read_fd >= 3 or prev_read_fd = -1
+            if (prev_read_fd >= 0) {
+                close(prev_read_fd);
+            }
             return;
         } else if (rc == 0) {
             setup_child_exec(curr_node, fd, prev_read_fd);
@@ -241,6 +255,7 @@ static void spawn_execs(LList *cmds) {
             
             // prev_read_fd will be -1 when we first start off. Only close
             // prev_read_fd when we are closing the previous pipe's read handle.
+            // NOTE: prev_read_fd >= 3 or prev_read_fd = -1
             if (prev_read_fd >= 0) {
                 close(prev_read_fd);
             }

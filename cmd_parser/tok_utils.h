@@ -17,7 +17,7 @@ typedef struct TokenizeUtils {
     
 } TokenizeUtils;
 
-// Creates TokenizeUtils.
+// Creates TokenizeUtils. Refers to line passed in.
 TokenizeUtils *create_tok_utils(char *line);
 
 // Deallocates TokenizeUtils. Does not deallocate line.

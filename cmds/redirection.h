@@ -27,6 +27,4 @@ void dealloc_redirection(void **redir);
 // Gets the redirection type.
 RedirType get_redir_type(char curr_char);
 
-void print_redir(void *redir);
-
 #endif

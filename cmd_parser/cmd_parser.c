@@ -307,7 +307,7 @@ static int add_cmd(LList *cmds_ll, TokenizeUtils *tok_utils, int curr_index, boo
     }
 
     // If cmd does not have args and does not have redirs,
-    // deallocate and do nothing.
+    // deallocate and print err if necessary.
     if (cmd->args[0] == NULL && is_empty_ll(cmd->redirections)) {
         if (print_on_err) {
             print_err();
@@ -341,7 +341,8 @@ LList *get_cmds(char *line) {
         dealloc_tok_utils(&tok_utils);
         return NULL;
     }
-
+    
+    // Get all commands seperated by pipes and add to cmds_ll.
     int i = 0;
     while (line[i] != '\0') {
         i = get_next_non_whitespace(line, i);
@@ -376,7 +377,8 @@ LList *get_cmds(char *line) {
             dealloc_ll_tok(&cmds_ll, &tok_utils);
             return NULL;
         } else {
-            // Try to tokenize.
+            // Try to tokenize. We pass FALSE because the initial
+            // command could be empty. (aka just hitting enter).
             if ((i = add_cmd(cmds_ll, tok_utils, i, FALSE)) < 0) {
                 dealloc_ll_tok(&cmds_ll, &tok_utils);
                 return NULL;
